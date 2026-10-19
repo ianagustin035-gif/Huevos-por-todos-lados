@@ -1,0 +1,1155 @@
+```html
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Granjero y Emprendedor</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        farm: {
+                            green: '#4CAF50',
+                            darkgreen: '#2E7D32',
+                            brown: '#795548',
+                            lightbrown: '#A1887F',
+                            accent: '#FF9800',
+                            gold: '#FFD700',
+                            bg: '#F4F7F2'
+                        }
+                    },
+                    fontFamily: {
+                        outfit: ['Outfit', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* Float text effect (+$$$) */
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            50% { opacity: 0.8; transform: translateY(-20px) scale(1.1); }
+            100% { opacity: 0; transform: translateY(-40px) scale(0.9); }
+        }
+
+        .floating-text {
+            position: absolute;
+            animation: floatUp 1.2s ease-out forwards;
+            pointer-events: none;
+            font-weight: bold;
+            z-index: 50;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        /* Pulse animation for ready to harvest */
+        @keyframes pulseGlow {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(76, 175, 80, 0.4)); }
+            50% { transform: scale(1.05); filter: drop-shadow(0 0 8px rgba(76, 175, 80, 0.8)); }
+        }
+
+        .ready-harvest {
+            animation: pulseGlow 1.5s infinite ease-in-out;
+            cursor: pointer;
+        }
+
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body class="bg-emerald-50/50 text-slate-800 min-h-screen flex flex-col justify-between">
+
+    <!-- TOP HEADER / DASHBOARD STATS -->
+    <header class="bg-emerald-800 text-white sticky top-0 z-40 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
+            <!-- Game Title & Farm Level -->
+            <div class="flex items-center gap-3">
+                <div class="bg-amber-500 p-2.5 rounded-2xl text-slate-900 font-extrabold text-xl shadow-inner flex items-center justify-center w-12 h-12">
+                    <i class="fa-solid font-bold text-2xl fa-wheat-awn"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-lg sm:text-xl tracking-tight leading-none text-amber-300">Mi Granja Pro</h1>
+                    <div class="flex items-center gap-2 mt-1">
+                        <span id="farm-level-badge" class="bg-emerald-900 text-amber-400 text-xs font-bold px-2 py-0.5 rounded-full border border-amber-400/30">
+                            Nivel 1
+                        </span>
+                        <span id="xp-text" class="text-xs text-emerald-200 font-semibold">XP: 0 / 100</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Ribbon -->
+            <div class="flex items-center gap-2 sm:gap-4 flex-wrap">
+                <!-- Coins -->
+                <div class="bg-emerald-900/80 border border-emerald-700/60 rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-coins text-amber-400 text-xl"></i>
+                    <div>
+                        <div class="text-[10px] text-emerald-300 uppercase font-bold tracking-wider leading-none">Dinero</div>
+                        <div id="stat-coins" class="text-lg font-black text-amber-300 leading-none mt-0.5">$100</div>
+                    </div>
+                </div>
+
+                <!-- Reputation -->
+                <div class="bg-emerald-900/80 border border-emerald-700/60 rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-star text-yellow-300 text-xl"></i>
+                    <div>
+                        <div class="text-[10px] text-emerald-300 uppercase font-bold tracking-wider leading-none">Reputación</div>
+                        <div id="stat-rep" class="text-lg font-black text-yellow-200 leading-none mt-0.5">0</div>
+                    </div>
+                </div>
+
+                <!-- Sound Toggle -->
+                <button id="btn-sound" onclick="toggleSound()" class="bg-emerald-700 hover:bg-emerald-600 active:scale-95 text-white p-2.5 rounded-xl transition shadow">
+                    <i id="sound-icon" class="fa-solid fa-volume-high"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- XP Progress Bar -->
+        <div class="w-full bg-emerald-950 h-1.5">
+            <div id="xp-bar" class="bg-amber-400 h-1.5 transition-all duration-300" style="width: 0%"></div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER WITH TABS -->
+    <main class="max-w-7xl w-full mx-auto p-3 sm:p-5 flex-grow">
+        
+        <!-- Navigation Tabs -->
+        <nav class="flex space-x-1 sm:space-x-2 bg-emerald-900/10 p-1.5 rounded-2xl mb-5 overflow-x-auto border border-emerald-900/10">
+            <button onclick="switchTab('farm')" id="tab-farm" class="tab-btn flex-1 min-w-[110px] py-2.5 px-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 bg-emerald-700 text-white shadow-sm">
+                <i class="fa-solid fa-tractor"></i> Mi Granja
+            </button>
+            <button onclick="switchTab('market')" id="tab-market" class="tab-btn flex-1 min-w-[110px] py-2.5 px-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 text-emerald-800 hover:bg-emerald-200/50">
+                <i class="fa-solid fa-store"></i> Mercado
+            </button>
+            <button onclick="switchTab('crafting')" id="tab-crafting" class="tab-btn flex-1 min-w-[110px] py-2.5 px-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 text-emerald-800 hover:bg-emerald-200/50">
+                <i class="fa-solid fa-industry"></i> Taller / Negocio
+            </button>
+            <button onclick="switchTab('upgrades')" id="tab-upgrades" class="tab-btn flex-1 min-w-[110px] py-2.5 px-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 text-emerald-800 hover:bg-emerald-200/50">
+                <i class="fa-solid fa-chart-line"></i> Inversiones
+            </button>
+            <button onclick="switchTab('inventory')" id="tab-inventory" class="tab-btn flex-1 min-w-[110px] py-2.5 px-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 text-emerald-800 hover:bg-emerald-200/50">
+                <i class="fa-solid fa-boxes-stacked"></i> Almacén
+            </button>
+        </nav>
+
+        <!-- SECTIONS CONTENT -->
+
+        <!-- 1. MI GRANJA -->
+        <section id="section-farm" class="tab-content space-y-6">
+            <!-- Cultivos Grid -->
+            <div class="bg-white rounded-3xl p-4 sm:p-6 border border-emerald-100 shadow-sm">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-seedling text-emerald-600"></i> Parcelas de Cultivo
+                        </h2>
+                        <p class="text-xs text-slate-500">Planta semillas y cosecha productos frescos</p>
+                    </div>
+                    <button onclick="buyPlot()" class="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs py-2 px-3 rounded-xl transition active:scale-95 flex items-center gap-1 shadow">
+                        <i class="fa-solid fa-plus"></i> Nueva Parcela (<span id="plot-cost">$50</span>)
+                    </button>
+                </div>
+
+                <div id="plots-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                    <!-- Dynamic Crops Plots -->
+                </div>
+            </div>
+
+            <!-- Animales Corral -->
+            <div class="bg-white rounded-3xl p-4 sm:p-6 border border-emerald-100 shadow-sm">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-cow text-amber-700"></i> Corral de Animales
+                        </h2>
+                        <p class="text-xs text-slate-500">Alimenta o recolecta subproductos. O sacrifícalos por carne.</p>
+                    </div>
+                </div>
+
+                <div id="animals-container" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Dynamic Animals Card -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. MERCADO -->
+        <section id="section-market" class="tab-content hidden space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Comprar Semillas y Animales -->
+                <div class="bg-white rounded-3xl p-5 border border-emerald-100 shadow-sm space-y-4">
+                    <h2 class="text-lg font-bold text-slate-800 border-b pb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-cart-shopping text-emerald-600"></i> Comprar Animales y Semillas
+                    </h2>
+
+                    <!-- Semillas -->
+                    <div>
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Semillas</h3>
+                        <div id="seeds-shop" class="space-y-2">
+                            <!-- Dynamic Seeds Shop -->
+                        </div>
+                    </div>
+
+                    <!-- Animales -->
+                    <div>
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Ganado</h3>
+                        <div id="animals-shop" class="space-y-2">
+                            <!-- Dynamic Animals Shop -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Venta Rápida de Inventario Directo -->
+                <div class="bg-white rounded-3xl p-5 border border-emerald-100 shadow-sm space-y-4">
+                    <div class="flex justify-between items-center border-b pb-2">
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-hand-holding-dollar text-amber-600"></i> Vender Materia Prima
+                        </h2>
+                        <button onclick="sellAllRaw()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-1.5 px-3 rounded-xl transition">
+                            Vender Todo Bruto
+                        </button>
+                    </div>
+                    
+                    <div id="quick-sell-container" class="space-y-2 max-h-[450px] overflow-y-auto pr-1">
+                        <!-- Dynamic Direct Sell list -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. TALLER Y EMPRENDIMIENTO -->
+        <section id="section-crafting" class="tab-content hidden space-y-6">
+            <div class="bg-white rounded-3xl p-5 border border-emerald-100 shadow-sm">
+                <div class="mb-5">
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-bread-slice text-amber-600"></i> Emprendimiento Artesanal
+                    </h2>
+                    <p class="text-xs text-slate-500">Combina tus recursos primarios para fabricar productos procesados de alto valor.</p>
+                </div>
+
+                <div id="recipes-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Dynamic Recipes -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. INVERSIONES Y MEJORAS -->
+        <section id="section-upgrades" class="tab-content hidden space-y-6">
+            <div class="bg-white rounded-3xl p-5 border border-emerald-100 shadow-sm">
+                <div class="mb-5">
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-microchip text-blue-600"></i> Automatización e Inversiones
+                    </h2>
+                    <p class="text-xs text-slate-500">Contrata empleados, instala tecnología y aumenta la productividad general.</p>
+                </div>
+
+                <div id="upgrades-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Dynamic Upgrades list -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. ALMACÉN E INVENTARIO -->
+        <section id="section-inventory" class="tab-content hidden space-y-6">
+            <div class="bg-white rounded-3xl p-5 border border-emerald-100 shadow-sm">
+                <div class="flex justify-between items-center mb-5 border-b pb-3">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-boxes-packing text-amber-800"></i> Inventario Total
+                        </h2>
+                        <p class="text-xs text-slate-500">Materia prima y productos elaborados en stock</p>
+                    </div>
+                    <button onclick="sellAllCrafted()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs py-2 px-3 rounded-xl transition">
+                        Vender Todo Elaborado
+                    </button>
+                </div>
+
+                <div id="inventory-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                    <!-- Dynamic Inventory Cards -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- FOOTER BAR -->
+    <footer class="bg-white border-t border-emerald-100 py-3 px-4 mt-8">
+        <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center text-xs text-slate-500 gap-2">
+            <div>
+                <i class="fa-solid fa-floppy-disk text-emerald-600 mr-1"></i> Guardado automático activado
+            </div>
+            <div class="flex gap-4">
+                <button onclick="saveGame(true)" class="hover:text-emerald-700 font-semibold">Guardar Ahora</button>
+                <button onclick="confirmReset()" class="hover:text-red-600 font-semibold text-red-500">Reiniciar Juego</button>
+            </div>
+        </div>
+    </footer>
+
+    <!-- MODAL SELECTOR DE SEMILLAS PARA PLANTAR -->
+    <div id="seed-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-5 shadow-2xl space-y-4 transform transition-all">
+            <div class="flex justify-between items-center border-b pb-2">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-seedling text-emerald-600"></i> Selecciona Semilla para Plantar
+                </h3>
+                <button onclick="closeSeedModal()" class="text-slate-400 hover:text-slate-600 text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <div id="seed-modal-list" class="space-y-2 max-h-60 overflow-y-auto">
+                <!-- Dynamic Seeds from Inventory -->
+            </div>
+        </div>
+    </div>
+
+    <!-- GAME SCRIPT LOGIC -->
+    <script>
+        // --- DATA STRUCTURE & STATE ---
+        const INITIAL_STATE = {
+            coins: 120,
+            xp: 0,
+            level: 1,
+            reputation: 0,
+            soundEnabled: true,
+            plotsCount: 4,
+            plots: [
+                { id: 0, crop: null, stage: 0, timeRemaining: 0 },
+                { id: 1, crop: null, stage: 0, timeRemaining: 0 },
+                { id: 2, crop: null, stage: 0, timeRemaining: 0 },
+                { id: 3, crop: null, stage: 0, timeRemaining: 0 }
+            ],
+            animals: {
+                chicken: { count: 1, progress: 0, timer: 10 },
+                cow: { count: 0, progress: 0, timer: 20 },
+                sheep: { count: 0, progress: 0, timer: 25 }
+            },
+            inventory: {
+                // Seeds
+                seed_wheat: 3,
+                seed_corn: 0,
+                seed_tomato: 0,
+                seed_carrot: 0,
+                
+                // Raw crops
+                wheat: 0,
+                corn: 0,
+                tomato: 0,
+                carrot: 0,
+
+                // Animal raw
+                egg: 0,
+                milk: 0,
+                wool: 0,
+                meat_chicken: 0,
+                meat_beef: 0,
+                meat_mutton: 0,
+
+                // Processed products
+                bread: 0,
+                cake: 0,
+                cheese: 0,
+                butter: 0,
+                sweater: 0,
+                fabric: 0
+            },
+            upgrades: {
+                autoHarvester: false,
+                autoFeedAnimals: false,
+                fastGrowth: false,
+                masterCraft: false
+            }
+        };
+
+        let state = JSON.parse(JSON.stringify(INITIAL_STATE));
+        let selectedPlotId = null;
+
+        // CATALOG DEFINITIONS
+        const CROPS = {
+            wheat: { id: 'wheat', name: 'Trigo', seedId: 'seed_wheat', growTime: 6, seedCost: 10, sellPrice: 15, icon: 'fa-wheat-awn', color: 'text-amber-600' },
+            corn: { id: 'corn', name: 'Maíz', seedId: 'seed_corn', growTime: 12, seedCost: 20, sellPrice: 35, icon: 'fa-plant-wilt', color: 'text-yellow-500' },
+            tomato: { id: 'tomato', name: 'Tomate', seedId: 'seed_tomato', growTime: 18, seedCost: 35, sellPrice: 65, icon: 'fa-apple-whole', color: 'text-red-500' },
+            carrot: { id: 'carrot', name: 'Zanahoria', seedId: 'seed_carrot', growTime: 25, seedCost: 50, sellPrice: 100, icon: 'fa-carrot', color: 'text-orange-500' }
+        };
+
+        const ANIMALS_DEF = {
+            chicken: { id: 'chicken', name: 'Gallina', cost: 80, product: 'egg', prodName: 'Huevo', cycleTime: 8, meat: 'meat_chicken', meatCount: 2, icon: 'fa-egg', animIcon: 'fa-feather', color: 'text-amber-700' },
+            cow: { id: 'cow', name: 'Vaca', cost: 250, product: 'milk', prodName: 'Leche', cycleTime: 16, meat: 'meat_beef', meatCount: 3, icon: 'fa-cow', animIcon: 'fa-bottle-droplet', color: 'text-slate-800' },
+            sheep: { id: 'sheep', name: 'Oveja', cost: 400, product: 'wool', prodName: 'Lana', cycleTime: 22, meat: 'meat_mutton', meatCount: 3, icon: 'fa-square-poll-vertical', animIcon: 'fa-rug', color: 'text-indigo-600' }
+        };
+
+        const ITEMS_DEF = {
+            // Seeds
+            seed_wheat: { name: 'Semilla Trigo', price: 10, type: 'seed', icon: 'fa-seedling', color: 'text-amber-600' },
+            seed_corn: { name: 'Semilla Maíz', price: 20, type: 'seed', icon: 'fa-seedling', color: 'text-yellow-500' },
+            seed_tomato: { name: 'Semilla Tomate', price: 35, type: 'seed', icon: 'fa-seedling', color: 'text-red-500' },
+            seed_carrot: { name: 'Semilla Zanahoria', price: 50, type: 'seed', icon: 'fa-seedling', color: 'text-orange-500' },
+
+            // Raw
+            wheat: { name: 'Trigo', price: 15, icon: 'fa-wheat-awn', color: 'text-amber-600' },
+            corn: { name: 'Maíz', price: 35, icon: 'fa-plant-wilt', color: 'text-yellow-500' },
+            tomato: { name: 'Tomate', price: 65, icon: 'fa-apple-whole', color: 'text-red-500' },
+            carrot: { name: 'Zanahoria', price: 100, icon: 'fa-carrot', color: 'text-orange-500' },
+
+            egg: { name: 'Huevo', price: 12, icon: 'fa-egg', color: 'text-amber-200' },
+            milk: { name: 'Leche', price: 30, icon: 'fa-bottle-droplet', color: 'text-blue-200' },
+            wool: { name: 'Lana', price: 50, icon: 'fa-rug', color: 'text-purple-300' },
+
+            meat_chicken: { name: 'Carne Pollo', price: 60, icon: 'fa-drumstick-bite', color: 'text-amber-700' },
+            meat_beef: { name: 'Carne Res', price: 180, icon: 'fa-drumstick-bite', color: 'text-red-800' },
+            meat_mutton: { name: 'Carne Cordero', price: 280, icon: 'fa-drumstick-bite', color: 'text-red-600' },
+
+            // Processed
+            bread: { name: 'Pan Fresco', price: 80, icon: 'fa-bread-slice', color: 'text-amber-700' },
+            cake: { name: 'Pastel Artesanal', price: 220, icon: 'fa-cake-candles', color: 'text-pink-500' },
+            cheese: { name: 'Queso Curado', price: 140, icon: 'fa-cheese', color: 'text-yellow-400' },
+            butter: { name: 'Mantequilla', price: 100, icon: 'fa-cube', color: 'text-yellow-200' },
+            sweater: { name: 'Suéter Tejido', price: 350, icon: 'fa-shirt', color: 'text-indigo-500' },
+            fabric: { name: 'Tela de Algodón', price: 190, icon: 'fa-scroll', color: 'text-teal-500' }
+        };
+
+        const RECIPES = [
+            { id: 'bread', name: 'Pan Fresco', inputs: { wheat: 2, egg: 1 }, output: 'bread', outCount: 1, xp: 20 },
+            { id: 'cake', name: 'Pastel Artesanal', inputs: { wheat: 3, egg: 2, milk: 1 }, output: 'cake', outCount: 1, xp: 50 },
+            { id: 'cheese', name: 'Queso Curado', inputs: { milk: 2 }, output: 'cheese', outCount: 1, xp: 30 },
+            { id: 'butter', name: 'Mantequilla', inputs: { milk: 1 }, output: 'butter', outCount: 1, xp: 15 },
+            { id: 'fabric', name: 'Tela de Algodón', inputs: { wool: 2 }, output: 'fabric', outCount: 1, xp: 35 },
+            { id: 'sweater', name: 'Suéter Tejido', inputs: { wool: 3, fabric: 1 }, output: 'sweater', outCount: 1, xp: 75 }
+        ];
+
+        const UPGRADES_DEF = [
+            { id: 'autoHarvester', name: 'Recolector Automático', cost: 500, desc: 'Cosecha automáticamente los cultivos al madurar.', icon: 'fa-robot' },
+            { id: 'autoFeedAnimals', name: 'Comedero Automatizado', cost: 800, desc: 'Aumenta un 25% la velocidad de producción animal.', icon: 'fa-bolt' },
+            { id: 'fastGrowth', name: 'Fertilizante Premium', cost: 1200, desc: 'Los cultivos crecen un 30% más rápido.', icon: 'fa-flask' },
+            { id: 'masterCraft', name: 'Maestría de Taller', cost: 2000, desc: 'Otorga un 20% más de dinero al vender productos procesados.', icon: 'fa-award' }
+        ];
+
+        // --- SOUND SYNTHESIZER (Web Audio API) ---
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSound(type) {
+            if (!state.soundEnabled) return;
+            try {
+                initAudio();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+
+                if (type === 'coin') {
+                    osc.frequency.setValueAtTime(800, now);
+                    osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                } else if (type === 'harvest') {
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.exponentialRampToValueAtTime(600, now + 0.12);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+                    osc.start(now);
+                    osc.stop(now + 0.12);
+                } else if (type === 'craft') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.setValueAtTime(600, now + 0.08);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                    osc.start(now);
+                    osc.stop(now + 0.2);
+                } else if (type === 'buy') {
+                    osc.frequency.setValueAtTime(500, now);
+                    osc.frequency.exponentialRampToValueAtTime(350, now + 0.1);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                }
+            } catch (e) {
+                // Audio fallback silence
+            }
+        }
+
+        function toggleSound() {
+            state.soundEnabled = !state.soundEnabled;
+            const icon = document.getElementById('sound-icon');
+            if (state.soundEnabled) {
+                icon.className = 'fa-solid fa-volume-high';
+            } else {
+                icon.className = 'fa-solid fa-volume-xmark';
+            }
+        }
+
+        // --- GAME LOOP & TICK ---
+        function gameLoop() {
+            // Update Crops
+            let fastMultiplier = state.upgrades.fastGrowth ? 1.3 : 1.0;
+            state.plots.forEach(plot => {
+                if (plot.crop && plot.stage === 0) {
+                    plot.timeRemaining -= (1 * fastMultiplier);
+                    if (plot.timeRemaining <= 0) {
+                        plot.stage = 1; // Ready
+                        if (state.upgrades.autoHarvester) {
+                            harvestCrop(plot.id);
+                        }
+                    }
+                }
+            });
+
+            // Update Animals
+            let animalSpeed = state.upgrades.autoFeedAnimals ? 1.25 : 1.0;
+            for (let key in state.animals) {
+                let anim = state.animals[key];
+                if (anim.count > 0) {
+                    anim.progress += (100 / anim.timer) * animalSpeed;
+                    if (anim.progress >= 100) {
+                        anim.progress = 0;
+                        let prodKey = ANIMALS_DEF[key].product;
+                        state.inventory[prodKey] += anim.count;
+                        showFloatingText(`+${anim.count} ${ITEMS_DEF[prodKey].name}`, 'text-emerald-600');
+                        playSound('harvest');
+                    }
+                }
+            }
+
+            renderDynamicElements();
+        }
+
+        // --- RENDERING FUNCTIONS ---
+        function renderUI() {
+            // Stats Header
+            document.getElementById('stat-coins').innerText = `$${Math.floor(state.coins)}`;
+            document.getElementById('stat-rep').innerText = state.reputation;
+            document.getElementById('farm-level-badge').innerText = `Nivel ${state.level}`;
+            
+            let reqXp = state.level * 100;
+            document.getElementById('xp-text').innerText = `XP: ${state.xp} / ${reqXp}`;
+            document.getElementById('xp-bar').style.width = `${Math.min(100, (state.xp / reqXp) * 100)}%`;
+
+            // Plot Cost
+            let nextPlotCost = state.plotsCount * 50;
+            document.getElementById('plot-cost').innerText = `$${nextPlotCost}`;
+
+            renderDynamicElements();
+            renderShopsAndCrafts();
+        }
+
+        function renderDynamicElements() {
+            // Render Plots
+            const plotsContainer = document.getElementById('plots-container');
+            plotsContainer.innerHTML = '';
+
+            state.plots.forEach(plot => {
+                const div = document.createElement('div');
+                div.className = "border-2 border-dashed border-amber-800/20 bg-amber-900/5 rounded-2xl p-3 flex flex-col items-center justify-between min-h-[120px] relative transition hover:border-amber-500/50";
+                
+                if (!plot.crop) {
+                    div.innerHTML = `
+                        <div class="text-amber-800/40 text-2xl mt-2"><i class="fa-solid fa-mound"></i></div>
+                        <span class="text-[11px] font-bold text-amber-800/60 uppercase">Vacio</span>
+                        <button onclick="openSeedModal(${plot.id})" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-1.5 rounded-xl transition shadow active:scale-95">
+                            Plantar
+                        </button>
+                    `;
+                } else if (plot.stage === 0) {
+                    let cropDef = CROPS[plot.crop];
+                    let pct = Math.max(0, Math.min(100, ((cropDef.growTime - plot.timeRemaining) / cropDef.growTime) * 100));
+                    div.innerHTML = `
+                        <div class="text-emerald-600 text-2xl mt-1 animate-pulse"><i class="fa-solid ${cropDef.icon}"></i></div>
+                        <div class="text-center w-full">
+                            <span class="text-xs font-bold text-slate-700 block">${cropDef.name}</span>
+                            <div class="w-full bg-slate-200 rounded-full h-1.5 mt-1 overflow-hidden">
+                                <div class="bg-emerald-500 h-1.5 transition-all" style="width: ${pct}%"></div>
+                            </div>
+                        </div>
+                        <span class="text-[10px] text-slate-400 font-semibold">${Math.ceil(plot.timeRemaining)}s</span>
+                    `;
+                } else {
+                    let cropDef = CROPS[plot.crop];
+                    div.className += " ready-harvest bg-emerald-100/60 border-emerald-400";
+                    div.onclick = () => harvestCrop(plot.id);
+                    div.innerHTML = `
+                        <div class="text-amber-500 text-3xl mt-1"><i class="fa-solid ${cropDef.icon}"></i></div>
+                        <span class="text-xs font-extrabold text-emerald-800 uppercase tracking-wider">¡Listo!</span>
+                        <button class="w-full bg-amber-500 text-white font-bold text-xs py-1.5 rounded-xl shadow">
+                            Cosechar
+                        </button>
+                    `;
+                }
+
+                plotsContainer.appendChild(div);
+            });
+
+            // Render Animals
+            const animalsContainer = document.getElementById('animals-container');
+            animalsContainer.innerHTML = '';
+
+            for (let key in state.animals) {
+                let animDef = ANIMALS_DEF[key];
+                let animData = state.animals[key];
+
+                let card = document.createElement('div');
+                card.className = "bg-emerald-50/50 border border-emerald-200/80 rounded-2xl p-4 flex flex-col justify-between space-y-3";
+                
+                card.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-2xl ${animDef.color}">
+                                <i class="fa-solid ${animDef.icon}"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-sm">${animDef.name}s</h3>
+                                <p class="text-xs text-slate-500">Cantidad: <span class="font-bold text-emerald-700">${animData.count}</span></p>
+                            </div>
+                        </div>
+                        <button onclick="slaughterAnimal('${key}')" title="Sacrificar por carne" class="bg-red-100 hover:bg-red-200 text-red-700 text-xs px-2.5 py-1.5 rounded-xl font-bold transition flex items-center gap-1">
+                            <i class="fa-solid fa-utensils"></i> Carne
+                        </button>
+                    </div>
+
+                    ${animData.count > 0 ? `
+                        <div>
+                            <div class="flex justify-between text-[11px] text-slate-500 mb-1 font-semibold">
+                                <span>Produciendo ${animDef.prodName}</span>
+                                <span>${Math.floor(animData.progress)}%</span>
+                            </div>
+                            <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                                <div class="bg-amber-500 h-2 transition-all duration-300" style="width: ${animData.progress}%"></div>
+                            </div>
+                        </div>
+                    ` : `
+                        <p class="text-xs text-slate-400 italic text-center py-2">No tienes ${animDef.name.toLowerCase()}s. Cómpralas en el Mercado.</p>
+                    `}
+                `;
+
+                animalsContainer.appendChild(card);
+            }
+        }
+
+        function renderShopsAndCrafts() {
+            // Seed Shop
+            const seedsShop = document.getElementById('seeds-shop');
+            seedsShop.innerHTML = '';
+            for (let key in CROPS) {
+                let crop = CROPS[key];
+                let div = document.createElement('div');
+                div.className = "flex justify-between items-center p-2.5 bg-slate-50 rounded-xl border border-slate-200/60";
+                div.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid ${crop.icon} ${crop.color} text-lg"></i>
+                        <div>
+                            <div class="text-xs font-bold text-slate-800">Semilla de ${crop.name}</div>
+                            <div class="text-[10px] text-slate-400">Tarda ${crop.growTime}s en crecer</div>
+                        </div>
+                    </div>
+                    <button onclick="buySeed('${crop.seedId}', ${crop.seedCost})" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl transition active:scale-95">
+                        $${crop.seedCost}
+                    </button>
+                `;
+                seedsShop.appendChild(div);
+            }
+
+            // Animal Shop
+            const animalsShop = document.getElementById('animals-shop');
+            animalsShop.innerHTML = '';
+            for (let key in ANIMALS_DEF) {
+                let anim = ANIMALS_DEF[key];
+                let div = document.createElement('div');
+                div.className = "flex justify-between items-center p-2.5 bg-slate-50 rounded-xl border border-slate-200/60";
+                div.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid ${anim.icon} ${anim.color} text-lg"></i>
+                        <div>
+                            <div class="text-xs font-bold text-slate-800">${anim.name}</div>
+                            <div class="text-[10px] text-slate-400">Produce ${anim.prodName} cada ${anim.cycleTime}s</div>
+                        </div>
+                    </div>
+                    <button onclick="buyAnimal('${anim.id}', ${anim.cost})" class="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-3 py-1.5 rounded-xl transition active:scale-95">
+                        $${anim.cost}
+                    </button>
+                `;
+                animalsShop.appendChild(div);
+            }
+
+            // Quick Direct Sell Container
+            const quickSellContainer = document.getElementById('quick-sell-container');
+            quickSellContainer.innerHTML = '';
+            let rawKeys = ['wheat', 'corn', 'tomato', 'carrot', 'egg', 'milk', 'wool', 'meat_chicken', 'meat_beef', 'meat_mutton'];
+
+            rawKeys.forEach(itemKey => {
+                let count = state.inventory[itemKey] || 0;
+                let itemDef = ITEMS_DEF[itemKey];
+                
+                let div = document.createElement('div');
+                div.className = "flex justify-between items-center p-2.5 bg-slate-50 rounded-xl border border-slate-200/60";
+                div.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid ${itemDef.icon} ${itemDef.color} text-lg"></i>
+                        <div>
+                            <div class="text-xs font-bold text-slate-800">${itemDef.name}</div>
+                            <div class="text-[10px] text-slate-500">Precio x1: <span class="text-emerald-600 font-bold">$${itemDef.price}</span> | Stock: <span class="font-bold">${count}</span></div>
+                        </div>
+                    </div>
+                    <button onclick="sellItem('${itemKey}', 1)" ${count <= 0 ? 'disabled class="opacity-50 cursor-not-allowed bg-slate-300 text-slate-500 text-xs px-3 py-1.5 rounded-xl font-bold"' : 'class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl transition active:scale-95"'}>
+                        Vender
+                    </button>
+                `;
+                quickSellContainer.appendChild(div);
+            });
+
+            // Recipes / Crafting Taller
+            const recipesContainer = document.getElementById('recipes-container');
+            recipesContainer.innerHTML = '';
+
+            RECIPES.forEach(rec => {
+                let outDef = ITEMS_DEF[rec.output];
+                
+                // Check inputs
+                let canCraft = true;
+                let reqText = [];
+                for (let inKey in rec.inputs) {
+                    let reqCount = rec.inputs[inKey];
+                    let hasCount = state.inventory[inKey] || 0;
+                    if (hasCount < reqCount) canCraft = false;
+                    reqText.push(`${ITEMS_DEF[inKey].name}: ${hasCount}/${reqCount}`);
+                }
+
+                let card = document.createElement('div');
+                card.className = "bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col justify-between space-y-3";
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="fa-solid ${outDef.icon} ${outDef.color} text-2xl"></i>
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-sm">${rec.name}</h3>
+                                <p class="text-[11px] text-emerald-600 font-bold">Valor de Venta: $${outDef.price}</p>
+                            </div>
+                        </div>
+                        <div class="text-[11px] text-slate-500 space-y-0.5">
+                            <p class="font-bold uppercase tracking-wider text-[9px] text-slate-400">Requisitos:</p>
+                            ${reqText.map(t => `<p class="${t.includes('0/') || t.includes('1/') && !canCraft ? 'text-red-500' : 'text-slate-600'}">${t}</p>`).join('')}
+                        </div>
+                    </div>
+                    <button onclick="craftItem('${rec.id}')" ${!canCraft ? 'disabled class="w-full opacity-50 cursor-not-allowed bg-slate-300 text-slate-500 font-bold text-xs py-2 rounded-xl"' : 'class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs py-2 rounded-xl transition active:scale-95 shadow"'}>
+                        Elaborar Producto
+                    </button>
+                `;
+                recipesContainer.appendChild(card);
+            });
+
+            // Upgrades
+            const upgradesContainer = document.getElementById('upgrades-container');
+            upgradesContainer.innerHTML = '';
+
+            UPGRADES_DEF.forEach(upg => {
+                let bought = state.upgrades[upg.id];
+                let div = document.createElement('div');
+                div.className = "bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-between gap-3";
+                div.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-xl text-blue-600">
+                            <i class="fa-solid ${upg.icon}"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-sm">${upg.name}</h3>
+                            <p class="text-xs text-slate-500 max-w-xs">${upg.desc}</p>
+                        </div>
+                    </div>
+                    ${bought ? `
+                        <span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1.5 rounded-xl border border-emerald-300">
+                            Comprado
+                        </span>
+                    ` : `
+                        <button onclick="buyUpgrade('${upg.id}', ${upg.cost})" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition active:scale-95 shadow">
+                            $${upg.cost}
+                        </button>
+                    `}
+                `;
+                upgradesContainer.appendChild(div);
+            });
+
+            // Inventory Grid
+            const inventoryGrid = document.getElementById('inventory-grid');
+            inventoryGrid.innerHTML = '';
+
+            for (let itemKey in state.inventory) {
+                let count = state.inventory[itemKey];
+                let itemDef = ITEMS_DEF[itemKey];
+
+                if (count > 0 && itemDef) {
+                    let card = document.createElement('div');
+                    card.className = "bg-slate-50 border border-slate-200/80 rounded-2xl p-3 flex flex-col items-center justify-between text-center min-h-[110px]";
+                    card.innerHTML = `
+                        <div class="text-2xl ${itemDef.color} mt-1">
+                            <i class="fa-solid ${itemDef.icon}"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold text-slate-800">${itemDef.name}</div>
+                            <div class="text-xs font-black text-emerald-600">x${count}</div>
+                        </div>
+                        <button onclick="sellItem('${itemKey}', 1)" class="w-full bg-slate-200 hover:bg-emerald-600 hover:text-white text-slate-700 font-bold text-[11px] py-1 rounded-lg transition mt-1">
+                            Vender ($${itemDef.price})
+                        </button>
+                    `;
+                    inventoryGrid.appendChild(card);
+                }
+            }
+        }
+
+        // --- ACTIONS & GAME MECHANICS ---
+
+        function addXP(amount) {
+            state.xp += amount;
+            let reqXp = state.level * 100;
+            if (state.xp >= reqXp) {
+                state.xp -= reqXp;
+                state.level++;
+                state.reputation += 5;
+                showFloatingText('¡NIVEL SUBIDO!', 'text-amber-500 font-black text-xl');
+                playSound('craft');
+            }
+        }
+
+        function buyPlot() {
+            let cost = state.plotsCount * 50;
+            if (state.coins >= cost) {
+                state.coins -= cost;
+                state.plots.push({ id: state.plots.length, crop: null, stage: 0, timeRemaining: 0 });
+                state.plotsCount++;
+                playSound('buy');
+                renderUI();
+            } else {
+                showFloatingText('¡Falta dinero!', 'text-red-500');
+            }
+        }
+
+        function openSeedModal(plotId) {
+            selectedPlotId = plotId;
+            const modal = document.getElementById('seed-modal');
+            const list = document.getElementById('seed-modal-list');
+            list.innerHTML = '';
+
+            let hasSeed = false;
+
+            for (let cropKey in CROPS) {
+                let crop = CROPS[cropKey];
+                let seedCount = state.inventory[crop.seedId] || 0;
+
+                if (seedCount > 0) {
+                    hasSeed = true;
+                    let div = document.createElement('div');
+                    div.className = "flex justify-between items-center p-3 bg-slate-50 hover:bg-emerald-50 rounded-xl cursor-pointer border border-slate-200 transition";
+                    div.onclick = () => plantCrop(cropKey);
+                    div.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid ${crop.icon} ${crop.color} text-xl"></i>
+                            <div>
+                                <div class="font-bold text-slate-800 text-xs">${crop.name}</div>
+                                <div class="text-[10px] text-slate-500">Stock semillas: ${seedCount}</div>
+                            </div>
+                        </div>
+                        <span class="bg-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-lg">Plantar</span>
+                    `;
+                    list.appendChild(div);
+                }
+            }
+
+            if (!hasSeed) {
+                list.innerHTML = `
+                    <div class="text-center py-6 text-slate-400 text-xs">
+                        No tienes semillas en el inventario.<br>Cómpralas primero en la pestaña <b>Mercado</b>.
+                    </div>
+                `;
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeSeedModal() {
+            document.getElementById('seed-modal').classList.add('hidden');
+        }
+
+        function plantCrop(cropKey) {
+            let crop = CROPS[cropKey];
+            if (state.inventory[crop.seedId] > 0) {
+                state.inventory[crop.seedId]--;
+                let plot = state.plots.find(p => p.id === selectedPlotId);
+                if (plot) {
+                    plot.crop = cropKey;
+                    plot.stage = 0;
+                    plot.timeRemaining = crop.growTime;
+                }
+                closeSeedModal();
+                playSound('harvest');
+                renderUI();
+            }
+        }
+
+        function harvestCrop(plotId) {
+            let plot = state.plots.find(p => p.id === plotId);
+            if (plot && plot.crop && plot.stage === 1) {
+                let cropKey = plot.crop;
+                state.inventory[cropKey] = (state.inventory[cropKey] || 0) + 1;
+                addXP(10);
+                plot.crop = null;
+                plot.stage = 0;
+                plot.timeRemaining = 0;
+                showFloatingText(`+1 ${CROPS[cropKey].name}`, 'text-emerald-600');
+                playSound('harvest');
+                renderUI();
+            }
+        }
+
+        function buySeed(seedId, cost) {
+            if (state.coins >= cost) {
+                state.coins -= cost;
+                state.inventory[seedId] = (state.inventory[seedId] || 0) + 1;
+                playSound('buy');
+                renderUI();
+            } else {
+                showFloatingText('¡Monedas insuficientes!', 'text-red-500');
+            }
+        }
+
+        function buyAnimal(animalId, cost) {
+            if (state.coins >= cost) {
+                state.coins -= cost;
+                state.animals[animalId].count++;
+                playSound('buy');
+                renderUI();
+            } else {
+                showFloatingText('¡Monedas insuficientes!', 'text-red-500');
+            }
+        }
+
+        function slaughterAnimal(animalId) {
+            let anim = state.animals[animalId];
+            if (anim.count > 0) {
+                anim.count--;
+                let animDef = ANIMALS_DEF[animalId];
+                let meatKey = animDef.meat;
+                let amount = animDef.meatCount;
+                state.inventory[meatKey] = (state.inventory[meatKey] || 0) + amount;
+                showFloatingText(`+${amount} ${ITEMS_DEF[meatKey].name}`, 'text-red-600');
+                playSound('harvest');
+                renderUI();
+            } else {
+                showFloatingText('¡No tienes animales para sacrificar!', 'text-slate-500');
+            }
+        }
+
+        function craftItem(recipeId) {
+            let recipe = RECIPES.find(r => r.id === recipeId);
+            if (!recipe) return;
+
+            // Validate
+            for (let inKey in recipe.inputs) {
+                if ((state.inventory[inKey] || 0) < recipe.inputs[inKey]) {
+                    showFloatingText('¡Ingredientes faltantes!', 'text-red-500');
+                    return;
+                }
+            }
+
+            // Deduct inputs
+            for (let inKey in recipe.inputs) {
+                state.inventory[inKey] -= recipe.inputs[inKey];
+            }
+
+            // Add output
+            state.inventory[recipe.output] = (state.inventory[recipe.output] || 0) + recipe.outCount;
+            addXP(recipe.xp);
+            state.reputation += 1;
+            showFloatingText(`+${recipe.outCount} ${ITEMS_DEF[recipe.output].name}`, 'text-amber-600');
+            playSound('craft');
+            renderUI();
+        }
+
+        function buyUpgrade(upgradeId, cost) {
+            if (state.coins >= cost) {
+                state.coins -= cost;
+                state.upgrades[upgradeId] = true;
+                playSound('buy');
+                renderUI();
+            } else {
+                showFloatingText('¡Monedas insuficientes!', 'text-red-500');
+            }
+        }
+
+        function sellItem(itemKey, count = 1) {
+            if ((state.inventory[itemKey] || 0) >= count) {
+                state.inventory[itemKey] -= count;
+                let price = ITEMS_DEF[itemKey].price;
+
+                // Bonus if crafted item and master craft upgrade
+                if (['bread', 'cake', 'cheese', 'butter', 'sweater', 'fabric'].includes(itemKey) && state.upgrades.masterCraft) {
+                    price = Math.floor(price * 1.2);
+                }
+
+                let totalGained = price * count;
+                state.coins += totalGained;
+                showFloatingText(`+$${totalGained}`, 'text-emerald-600 font-bold');
+                playSound('coin');
+                renderUI();
+            }
+        }
+
+        function sellAllRaw() {
+            let rawKeys = ['wheat', 'corn', 'tomato', 'carrot', 'egg', 'milk', 'wool', 'meat_chicken', 'meat_beef', 'meat_mutton'];
+            let totalGained = 0;
+
+            rawKeys.forEach(k => {
+                let count = state.inventory[k] || 0;
+                if (count > 0) {
+                    let price = ITEMS_DEF[k].price;
+                    totalGained += count * price;
+                    state.inventory[k] = 0;
+                }
+            });
+
+            if (totalGained > 0) {
+                state.coins += totalGained;
+                showFloatingText(`+$${totalGained}`, 'text-emerald-600 font-black');
+                playSound('coin');
+                renderUI();
+            } else {
+                showFloatingText('¡Nada que vender!', 'text-slate-400');
+            }
+        }
+
+        function sellAllCrafted() {
+            let craftedKeys = ['bread', 'cake', 'cheese', 'butter', 'sweater', 'fabric'];
+            let totalGained = 0;
+
+            craftedKeys.forEach(k => {
+                let count = state.inventory[k] || 0;
+                if (count > 0) {
+                    let price = ITEMS_DEF[k].price;
+                    if (state.upgrades.masterCraft) price = Math.floor(price * 1.2);
+                    totalGained += count * price;
+                    state.inventory[k] = 0;
+                }
+            });
+
+            if (totalGained > 0) {
+                state.coins += totalGained;
+                showFloatingText(`+$${totalGained}`, 'text-amber-600 font-black');
+                playSound('coin');
+                renderUI();
+            } else {
+                showFloatingText('¡No tienes productos elaborados!', 'text-slate-400');
+            }
+        }
+
+        // --- NAVIGATION TABS ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('bg-emerald-700', 'text-white', 'shadow-sm');
+                el.classList.add('text-emerald-800', 'hover:bg-emerald-200/50');
+            });
+
+            document.getElementById(`section-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-${tabId}`);
+            activeBtn.classList.add('bg-emerald-700', 'text-white', 'shadow-sm');
+            activeBtn.classList.remove('text-emerald-800', 'hover:bg-emerald-200/50');
+        }
+
+        // --- VISUAL FEEDBACK (FLOATING TEXT) ---
+        function showFloatingText(text, colorClass = 'text-amber-500') {
+            const el = document.createElement('div');
+            el.className = `floating-text ${colorClass} text-sm font-black`;
+            el.innerText = text;
+
+            // Random coordinates near center
+            const x = window.innerWidth / 2 + (Math.random() * 120 - 60);
+            const y = window.innerHeight / 2 + (Math.random() * 60 - 30);
+
+            el.style.left = `${x}px`;
+            el.style.top = `${y}px`;
+
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 1200);
+        }
+
+        // --- LOCAL STORAGE SAVE / LOAD ---
+        function saveGame(manual = false) {
+            try {
+                localStorage.setItem('farmer_entrepreneur_save', JSON.stringify(state));
+                if (manual) showFloatingText('¡Juego Guardado!', 'text-blue-500');
+            } catch (e) {
+                console.error("Save error", e);
+            }
+        }
+
+        function loadGame() {
+            try {
+                const saved = localStorage.getItem('farmer_entrepreneur_save');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    state = Object.assign({}, INITIAL_STATE, parsed);
+                }
+            } catch (e) {
+                console.error("Load error", e);
+            }
+        }
+
+        function confirmReset() {
+            if (confirm("¿Estás seguro de que quieres reiniciar todo tu progreso de la granja?")) {
+                localStorage.removeItem('farmer_entrepreneur_save');
+                state = JSON.parse(JSON.stringify(INITIAL_STATE));
+                renderUI();
+                showFloatingText('¡Granja Reiniciada!', 'text-red-500');
+            }
+        }
+
+        // --- INITIALIZATION ---
+        window.onload = function () {
+            loadGame();
+            renderUI();
+
+            // Game Loop Interval (Every 1 second)
+            setInterval(gameLoop, 1000);
+
+            // Auto Save Interval (Every 15 seconds)
+            setInterval(() => saveGame(false), 15000);
+        };
+    </script>
+</body>
+</html>
+```
