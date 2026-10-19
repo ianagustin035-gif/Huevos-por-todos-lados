@@ -1,0 +1,719 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#065f46">
+<title>Mi Granja Pro</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+tailwind.config={theme:{extend:{fontFamily:{outfit:['Outfit','sans-serif']}}}};
+</script>
+<style>
+*{box-sizing:border-box}
+body{font-family:'Outfit',sans-serif;user-select:none;-webkit-user-select:none}
+button:disabled{opacity:.45;cursor:not-allowed}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(1)}50%{opacity:.8;transform:translateY(-20px) scale(1.1)}100%{opacity:0;transform:translateY(-40px) scale(.9)}}
+.floating-text{position:fixed;animation:floatUp 1.2s ease-out forwards;pointer-events:none;font-weight:900;z-index:100;text-shadow:1px 1px 2px #0002}
+@keyframes pulseGlow{0%,100%{transform:scale(1);filter:drop-shadow(0 0 2px #4caf5066)}50%{transform:scale(1.05);filter:drop-shadow(0 0 8px #4caf50cc)}}
+.ready-harvest{animation:pulseGlow 1.5s infinite;cursor:pointer}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:#888;border-radius:10px}
+button{touch-action:manipulation}
+</style>
+</head>
+<body class="bg-emerald-50/50 text-slate-800 min-h-screen flex flex-col">
+
+<header class="bg-emerald-800 text-white sticky top-0 z-40 shadow-md">
+ <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
+  <div class="flex items-center gap-3">
+   <div class="bg-amber-500 p-2.5 rounded-2xl text-slate-900 text-xl shadow-inner flex items-center justify-center w-12 h-12"><i class="fa-solid fa-wheat-awn"></i></div>
+   <div>
+    <h1 class="font-extrabold text-xl tracking-tight text-amber-300">Mi Granja Pro</h1>
+    <div class="flex items-center gap-2 mt-1">
+     <span id="farm-level-badge" class="bg-emerald-900 text-amber-400 text-xs font-bold px-2 py-0.5 rounded-full">Nivel 1</span>
+     <span id="xp-text" class="text-xs text-emerald-200 font-semibold">XP: 0 / 100</span>
+    </div>
+   </div>
+  </div>
+  <div class="flex items-center gap-2 flex-wrap">
+   <div class="bg-emerald-900/80 border border-emerald-700 rounded-xl px-3 py-2 flex items-center gap-2">
+    <i class="fa-solid fa-coins text-amber-400 text-xl"></i>
+    <div><div class="text-[10px] text-emerald-300 uppercase font-bold">Dinero</div><div id="stat-coins" class="text-lg font-black text-amber-300">$120</div></div>
+   </div>
+   <div class="bg-emerald-900/80 border border-emerald-700 rounded-xl px-3 py-2 flex items-center gap-2">
+    <i class="fa-solid fa-star text-yellow-300 text-xl"></i>
+    <div><div class="text-[10px] text-emerald-300 uppercase font-bold">Reputación</div><div id="stat-rep" class="text-lg font-black">0</div></div>
+   </div>
+   <button id="btn-sound" onclick="toggleSound()" class="bg-emerald-700 hover:bg-emerald-600 p-3 rounded-xl"><i id="sound-icon" class="fa-solid fa-volume-high"></i></button>
+  </div>
+ </div>
+ <div class="w-full bg-emerald-950 h-1.5"><div id="xp-bar" class="bg-amber-400 h-1.5 transition-all" style="width:0%"></div></div>
+</header>
+
+<main class="max-w-7xl w-full mx-auto p-3 sm:p-5 flex-grow">
+ <nav class="flex gap-1 sm:gap-2 bg-emerald-900/10 p-1.5 rounded-2xl mb-5 overflow-x-auto border border-emerald-900/10">
+  <button onclick="switchTab('farm')" id="tab-farm" class="tab-btn min-w-[110px] flex-1 py-2.5 px-3 rounded-xl font-bold text-sm bg-emerald-700 text-white"><i class="fa-solid fa-tractor"></i> Granja</button>
+  <button onclick="switchTab('market')" id="tab-market" class="tab-btn min-w-[110px] flex-1 py-2.5 px-3 rounded-xl font-bold text-sm text-emerald-800 hover:bg-emerald-200/50"><i class="fa-solid fa-store"></i> Mercado</button>
+  <button onclick="switchTab('crafting')" id="tab-crafting" class="tab-btn min-w-[130px] flex-1 py-2.5 px-3 rounded-xl font-bold text-sm text-emerald-800 hover:bg-emerald-200/50"><i class="fa-solid fa-industry"></i> Taller</button>
+  <button onclick="switchTab('upgrades')" id="tab-upgrades" class="tab-btn min-w-[115px] flex-1 py-2.5 px-3 rounded-xl font-bold text-sm text-emerald-800 hover:bg-emerald-200/50"><i class="fa-solid fa-chart-line"></i> Inversiones</button>
+  <button onclick="switchTab('inventory')" id="tab-inventory" class="tab-btn min-w-[110px] flex-1 py-2.5 px-3 rounded-xl font-bold text-sm text-emerald-800 hover:bg-emerald-200/50"><i class="fa-solid fa-boxes-stacked"></i> Almacén</button>
+ </nav>
+
+ <section id="section-farm" class="tab-content space-y-6">
+  <div class="bg-white rounded-3xl p-4 sm:p-6 border border-emerald-100 shadow-sm">
+   <div class="flex justify-between items-center gap-3 mb-4">
+    <div><h2 class="text-xl font-bold"><i class="fa-solid fa-seedling text-emerald-600"></i> Parcelas de cultivo</h2><p class="text-xs text-slate-500">Plantá, esperá y cosechá.</p></div>
+    <button onclick="buyPlot()" class="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs py-2 px-3 rounded-xl"><i class="fa-solid fa-plus"></i> Parcela (<span id="plot-cost">$200</span>)</button>
+   </div>
+   <div id="plots-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3"></div>
+  </div>
+  <div class="bg-white rounded-3xl p-4 sm:p-6 border border-emerald-100 shadow-sm">
+   <h2 class="text-xl font-bold mb-1"><i class="fa-solid fa-cow text-amber-700"></i> Corral de animales</h2>
+   <p class="text-xs text-slate-500 mb-4">Recolectá sus productos o conseguí carne.</p>
+   <div id="animals-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+  </div>
+ </section>
+
+ <section id="section-market" class="tab-content hidden space-y-6">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+   <div class="bg-white rounded-3xl p-5 border border-emerald-100 shadow-sm space-y-4">
+    <h2 class="text-lg font-bold border-b pb-2"><i class="fa-solid fa-cart-shopping text-emerald-600"></i> Comprar</h2>
+    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Semillas</h3>
+    <div id="seeds-shop" class="space-y-2"></div>
+    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 pt-3">Animales</h3>
+    <div id="animals-shop" class="space-y-2"></div>
+   </div>
+   <div class="bg-white rounded-3xl p-5 border border-emerald-100 shadow-sm">
+    <div class="flex justify-between items-center gap-2 border-b pb-3 mb-3">
+     <h2 class="text-lg font-bold"><i class="fa-solid fa-hand-holding-dollar text-amber-600"></i> Venta rápida</h2>
+     <button onclick="sellAllRaw()" class="bg-emerald-600 text-white text-xs font-bold py-2 px-3 rounded-xl">Vender materia prima</button>
+    </div>
+    <div id="quick-sell-container" class="space-y-2 max-h-[600px] overflow-y-auto pr-1"></div>
+   </div>
+  </div>
+ </section>
+
+ <section id="section-crafting" class="tab-content hidden">
+  <div class="bg-white rounded-3xl p-5 border border-emerald-100 shadow-sm">
+   <h2 class="text-xl font-bold"><i class="fa-solid fa-bread-slice text-amber-600"></i> Taller y emprendimiento</h2>
+   <p class="text-xs text-slate-500 mb-5">Convertí materias primas en productos más valiosos.</p>
+   <div id="recipes-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+  </div>
+ </section>
+
+ <section id="section-upgrades" class="tab-content hidden">
+  <div class="bg-white rounded-3xl p-5 border border-emerald-100 shadow-sm">
+   <h2 class="text-xl font-bold"><i class="fa-solid fa-microchip text-blue-600"></i> Inversiones y automatización</h2>
+   <p class="text-xs text-slate-500 mb-5">Mejorá tu granja para trabajar menos y producir más.</p>
+   <div id="upgrades-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+  </div>
+ </section>
+
+ <section id="section-inventory" class="tab-content hidden">
+  <div class="bg-white rounded-3xl p-5 border border-emerald-100 shadow-sm">
+   <div class="flex justify-between items-center gap-2 mb-5 border-b pb-3">
+    <div><h2 class="text-xl font-bold"><i class="fa-solid fa-boxes-packing text-amber-800"></i> Almacén</h2><p class="text-xs text-slate-500">Todo tu inventario.</p></div>
+    <button onclick="sellAllCrafted()" class="bg-amber-600 text-white text-xs font-bold py-2 px-3 rounded-xl">Vender elaborados</button>
+   </div>
+   <div id="inventory-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3"></div>
+  </div>
+ </section>
+</main>
+
+<footer class="bg-white border-t border-emerald-100 py-4 px-4 mt-8">
+ <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center text-xs text-slate-500 gap-3">
+  <span><i class="fa-solid fa-floppy-disk text-emerald-600"></i> Guardado automático activado</span>
+  <div class="flex gap-4"><button onclick="saveGame(true)" class="font-semibold hover:text-emerald-700">Guardar ahora</button><button onclick="confirmReset()" class="font-semibold text-red-500">Reiniciar juego</button></div>
+ </div>
+</footer>
+
+<div id="seed-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+ <div class="bg-white rounded-3xl max-w-md w-full p-5 shadow-2xl space-y-4">
+  <div class="flex justify-between items-center border-b pb-2"><h3 class="font-bold"><i class="fa-solid fa-seedling text-emerald-600"></i> Elegí una semilla</h3><button onclick="closeSeedModal()" class="text-slate-400 text-xl"><i class="fa-solid fa-xmark"></i></button></div>
+  <div id="seed-modal-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
+ </div>
+</div>
+
+<div id="confirm-modal" class="fixed inset-0 bg-slate-900/50 z-50 hidden items-center justify-center p-4">
+ <div class="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl">
+  <h3 id="confirm-title" class="text-xl font-extrabold mb-2">Confirmar</h3>
+  <p id="confirm-message" class="text-sm text-slate-600 mb-5"></p>
+  <div class="flex gap-3"><button id="confirm-yes" class="flex-1 bg-red-500 text-white font-bold py-2.5 rounded-xl">Confirmar</button><button onclick="closeConfirm()" class="flex-1 bg-slate-200 font-bold py-2.5 rounded-xl">Cancelar</button></div>
+ </div>
+</div>
+
+<div id="toast-root" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 w-max max-w-[90%]"></div>
+
+<script>
+'use strict';
+
+const SAVE_KEY='farmer_entrepreneur_save';
+
+const CROPS={
+ wheat:{id:'wheat',name:'Trigo',seedId:'seed_wheat',growTime:6,seedCost:10,sellPrice:15,xp:10,icon:'fa-wheat-awn',color:'text-amber-600'},
+ corn:{id:'corn',name:'Maíz',seedId:'seed_corn',growTime:12,seedCost:20,sellPrice:35,xp:15,icon:'fa-plant-wilt',color:'text-yellow-500'},
+ tomato:{id:'tomato',name:'Tomate',seedId:'seed_tomato',growTime:18,seedCost:35,sellPrice:65,xp:20,icon:'fa-apple-whole',color:'text-red-500'},
+ carrot:{id:'carrot',name:'Zanahoria',seedId:'seed_carrot',growTime:25,seedCost:50,sellPrice:100,xp:25,icon:'fa-carrot',color:'text-orange-500'}
+};
+
+const ANIMALS_DEF={
+ chicken:{id:'chicken',name:'Gallina',cost:80,product:'egg',prodName:'Huevo',cycleTime:8,meat:'meat_chicken',meatCount:2,icon:'fa-egg',color:'text-amber-700',emoji:'🐔'},
+ cow:{id:'cow',name:'Vaca',cost:250,product:'milk',prodName:'Leche',cycleTime:16,meat:'meat_beef',meatCount:3,icon:'fa-cow',color:'text-slate-800',emoji:'🐮'},
+ sheep:{id:'sheep',name:'Oveja',cost:400,product:'wool',prodName:'Lana',cycleTime:22,meat:'meat_mutton',meatCount:3,icon:'fa-rug',color:'text-indigo-600',emoji:'🐑'},
+ pig:{id:'pig',name:'Cerdo',cost:500,product:'manure',prodName:'Abono',cycleTime:18,meat:'meat_pork',meatCount:4,icon:'fa-paw',color:'text-pink-600',emoji:'🐷'},
+ duck:{id:'duck',name:'Pato',cost:180,product:'duck_egg',prodName:'Huevo de pato',cycleTime:10,meat:'meat_duck',meatCount:2,icon:'fa-feather',color:'text-sky-600',emoji:'🦆'},
+ goat:{id:'goat',name:'Cabra',cost:320,product:'goat_milk',prodName:'Leche de cabra',cycleTime:18,meat:'meat_goat',meatCount:3,icon:'fa-horse',color:'text-amber-800',emoji:'🐐'},
+ rabbit:{id:'rabbit',name:'Conejo',cost:220,product:'rabbit_fur',prodName:'Piel de conejo',cycleTime:15,meat:'meat_rabbit',meatCount:2,icon:'fa-paw',color:'text-stone-600',emoji:'🐇'},
+ turkey:{id:'turkey',name:'Pavo',cost:350,product:'turkey_egg',prodName:'Huevo de pavo',cycleTime:20,meat:'meat_turkey',meatCount:4,icon:'fa-feather-pointed',color:'text-orange-700',emoji:'🦃'}
+};
+
+const ITEMS_DEF={
+ seed_wheat:{name:'Semilla de trigo',price:10,type:'seed',icon:'fa-seedling',color:'text-amber-600'},
+ seed_corn:{name:'Semilla de maíz',price:20,type:'seed',icon:'fa-seedling',color:'text-yellow-500'},
+ seed_tomato:{name:'Semilla de tomate',price:35,type:'seed',icon:'fa-seedling',color:'text-red-500'},
+ seed_carrot:{name:'Semilla de zanahoria',price:50,type:'seed',icon:'fa-seedling',color:'text-orange-500'},
+ wheat:{name:'Trigo',price:15,icon:'fa-wheat-awn',color:'text-amber-600'},
+ corn:{name:'Maíz',price:35,icon:'fa-plant-wilt',color:'text-yellow-500'},
+ tomato:{name:'Tomate',price:65,icon:'fa-apple-whole',color:'text-red-500'},
+ carrot:{name:'Zanahoria',price:100,icon:'fa-carrot',color:'text-orange-500'},
+ egg:{name:'Huevo',price:12,icon:'fa-egg',color:'text-amber-500'},
+ milk:{name:'Leche',price:30,icon:'fa-bottle-droplet',color:'text-blue-500'},
+ wool:{name:'Lana',price:50,icon:'fa-rug',color:'text-purple-500'},
+ manure:{name:'Abono',price:10,icon:'fa-leaf',color:'text-green-700'},
+ duck_egg:{name:'Huevo de pato',price:18,icon:'fa-egg',color:'text-sky-600'},
+ goat_milk:{name:'Leche de cabra',price:35,icon:'fa-bottle-droplet',color:'text-blue-600'},
+ rabbit_fur:{name:'Piel de conejo',price:24,icon:'fa-paw',color:'text-stone-600'},
+ turkey_egg:{name:'Huevo de pavo',price:30,icon:'fa-egg',color:'text-orange-600'},
+ meat_chicken:{name:'Carne de pollo',price:60,icon:'fa-drumstick-bite',color:'text-amber-700'},
+ meat_beef:{name:'Carne vacuna',price:180,icon:'fa-drumstick-bite',color:'text-red-800'},
+ meat_mutton:{name:'Carne de cordero',price:280,icon:'fa-drumstick-bite',color:'text-red-600'},
+ meat_pork:{name:'Carne de cerdo',price:100,icon:'fa-bacon',color:'text-pink-700'},
+ meat_duck:{name:'Carne de pato',price:90,icon:'fa-drumstick-bite',color:'text-amber-800'},
+ meat_goat:{name:'Carne de cabra',price:150,icon:'fa-drumstick-bite',color:'text-red-700'},
+ meat_rabbit:{name:'Carne de conejo',price:80,icon:'fa-drumstick-bite',color:'text-stone-600'},
+ meat_turkey:{name:'Carne de pavo',price:130,icon:'fa-drumstick-bite',color:'text-orange-700'},
+ bread:{name:'Pan fresco',price:80,icon:'fa-bread-slice',color:'text-amber-700'},
+ cake:{name:'Torta artesanal',price:220,icon:'fa-cake-candles',color:'text-pink-500'},
+ cheese:{name:'Queso curado',price:140,icon:'fa-cheese',color:'text-yellow-500'},
+ butter:{name:'Manteca',price:100,icon:'fa-cube',color:'text-yellow-500'},
+ sweater:{name:'Suéter tejido',price:350,icon:'fa-shirt',color:'text-indigo-500'},
+ fabric:{name:'Tela artesanal',price:190,icon:'fa-scroll',color:'text-teal-500'},
+ cornmeal:{name:'Harina de maíz',price:75,icon:'fa-bowl-food',color:'text-yellow-600'},
+ carrot_cake:{name:'Torta de zanahoria',price:300,icon:'fa-cake-candles',color:'text-orange-500'},
+ goat_cheese:{name:'Queso de cabra',price:190,icon:'fa-cheese',color:'text-yellow-600'},
+ wool_hat:{name:'Gorro de lana',price:260,icon:'fa-hat-wizard',color:'text-purple-600'}
+};
+
+const RECIPES=[
+ {id:'bread',name:'Pan fresco',inputs:{wheat:2,egg:1},output:'bread',outCount:1,xp:20,icon:'fa-bread-slice'},
+ {id:'cake',name:'Torta artesanal',inputs:{wheat:3,egg:2,milk:1},output:'cake',outCount:1,xp:50,icon:'fa-cake-candles'},
+ {id:'cheese',name:'Queso curado',inputs:{milk:2},output:'cheese',outCount:1,xp:30,icon:'fa-cheese'},
+ {id:'butter',name:'Manteca',inputs:{milk:1},output:'butter',outCount:1,xp:15,icon:'fa-cube'},
+ {id:'fabric',name:'Tela artesanal',inputs:{wool:2},output:'fabric',outCount:1,xp:35,icon:'fa-scroll'},
+ {id:'sweater',name:'Suéter tejido',inputs:{wool:3,fabric:1},output:'sweater',outCount:1,xp:75,icon:'fa-shirt'},
+ {id:'cornmeal',name:'Harina de maíz',inputs:{corn:3},output:'cornmeal',outCount:1,xp:25,icon:'fa-bowl-food'},
+ {id:'carrot_cake',name:'Torta de zanahoria',inputs:{carrot:3,egg:2,milk:1},output:'carrot_cake',outCount:1,xp:80,icon:'fa-cake-candles'},
+ {id:'goat_cheese',name:'Queso de cabra',inputs:{goat_milk:3},output:'goat_cheese',outCount:1,xp:45,icon:'fa-cheese'},
+ {id:'wool_hat',name:'Gorro de lana',inputs:{wool:2,fabric:1},output:'wool_hat',outCount:1,xp:60,icon:'fa-hat-wizard'}
+];
+
+const UPGRADES_DEF=[
+ {id:'autoHarvester',name:'Cosechadora automática',cost:500,desc:'Cosecha automáticamente los cultivos maduros.',icon:'fa-robot'},
+ {id:'autoFeedAnimals',name:'Recolector animal automático',cost:800,desc:'Recolecta automáticamente los productos de tus animales.',icon:'fa-bolt'},
+ {id:'fastGrowth',name:'Fertilizante premium',cost:1200,desc:'Tus cultivos crecen un 30% más rápido. También acelera la producción animal.',icon:'fa-flask'},
+ {id:'masterCraft',name:'Maestría de taller',cost:2000,desc:'Ganás un 20% extra al vender productos elaborados.',icon:'fa-award'},
+ {id:'autoCultivator',name:'Cultivador inteligente',cost:3000,desc:'Cosecha y vuelve a plantar automáticamente si tenés semillas.',icon:'fa-tractor'}
+];
+
+function freshInventory(){
+ const inv={};
+ Object.keys(ITEMS_DEF).forEach(k=>inv[k]=0);
+ inv.seed_wheat=3;
+ return inv;
+}
+function defaultState(){
+ const animals={};
+ Object.keys(ANIMALS_DEF).forEach(k=>animals[k]={count:0,progress:0,timer:ANIMALS_DEF[k].cycleTime});
+ animals.chicken.count=1;
+ return {
+  coins:120,xp:0,level:1,reputation:0,soundEnabled:true,plotsCount:4,
+  plots:Array.from({length:4},(_,i)=>({id:i,crop:null,stage:0,timeRemaining:0})),
+  animals,inventory:freshInventory(),
+  upgrades:{autoHarvester:false,autoFeedAnimals:false,fastGrowth:false,masterCraft:false,autoCultivator:false}
+ };
+}
+
+function mergeObject(base,old){
+ if(!old||typeof old!=='object')return base;
+ for(const key of Object.keys(old)){
+  if(old[key]===undefined)continue;
+  if(base[key]&&typeof base[key]==='object'&&!Array.isArray(base[key])&&old[key]&&typeof old[key]==='object'){
+   base[key]=mergeObject(base[key],old[key]);
+  }else base[key]=old[key];
+ }
+ return base;
+}
+function migrateSave(parsed){
+ const s=defaultState();
+ if(!parsed||typeof parsed!=='object')return s;
+ ['coins','xp','level','reputation','soundEnabled','plotsCount'].forEach(k=>{
+  if(parsed[k]!==undefined)s[k]=parsed[k];
+ });
+ s.inventory=mergeObject(freshInventory(),parsed.inventory||{});
+
+ // Convierte el formato de animales del juego original al formato nuevo.
+ Object.keys(ANIMALS_DEF).forEach(id=>{
+  const old=parsed.animals?.[id];
+  if(typeof old==='number'){
+   s.animals[id].count=old;
+  }else if(old&&typeof old==='object'){
+   s.animals[id]={
+    count:Number(old.count)||0,
+    progress:Number(old.progress)||0,
+    timer:Number(old.timer)||ANIMALS_DEF[id].cycleTime
+   };
+  }
+ });
+
+ // Convierte las semillas del formato antiguo si existieran.
+ Object.keys(CROPS).forEach(id=>{
+  const seedId=CROPS[id].seedId;
+  if(parsed.inventory?.[seedId]!==undefined)s.inventory[seedId]=Math.max(0,Number(parsed.inventory[seedId])||0);
+  if(parsed.inventory?.[id+'_seeds']!==undefined && parsed.inventory?.[seedId]===undefined){
+   s.inventory[seedId]=Math.max(0,Number(parsed.inventory[id+'_seeds'])||0);
+  }
+ });
+
+ s.upgrades=mergeObject(s.upgrades,parsed.upgrades||{});
+ s.plotsCount=Math.max(4,Number(s.plotsCount)||4);
+
+ if(Array.isArray(parsed.plots)){
+  s.plots=parsed.plots.map((p,i)=>({
+   id:i,
+   crop:p.crop&&CROPS[p.crop]?p.crop:null,
+   stage:Number(p.stage)||0,
+   timeRemaining:Math.max(0,Number(p.timeRemaining)||0)
+  }));
+ }
+ while(s.plots.length<s.plotsCount){
+  s.plots.push({id:s.plots.length,crop:null,stage:0,timeRemaining:0});
+ }
+ s.plotsCount=s.plots.length;
+
+ // Las mejoras antiguas se guardaban como booleanos.
+ Object.keys(s.upgrades).forEach(k=>s.upgrades[k]=!!s.upgrades[k]);
+ return s;
+}
+function loadGame(){
+ try{
+  const raw=localStorage.getItem(SAVE_KEY);
+  return raw?migrateSave(JSON.parse(raw)):defaultState();
+ }catch(e){
+  console.error('No se pudo cargar la partida',e);
+  return defaultState();
+ }
+}
+
+let state=loadGame();
+let selectedPlotId=null;
+let audioCtx=null;
+let lastTick=Date.now();
+let tickBusy=false;
+
+function money(n){return '$'+Math.floor(n).toLocaleString('es-AR');}
+function notify(msg,color='text-white'){
+ const root=document.getElementById('toast-root');
+ const el=document.createElement('div');
+ el.className='bg-emerald-950 '+color+' px-4 py-3 rounded-xl shadow-xl text-sm font-bold';
+ el.textContent=msg;root.appendChild(el);
+ setTimeout(()=>el.remove(),2600);
+}
+function showFloatingText(text,colorClass='text-amber-500'){
+ const el=document.createElement('div');
+ el.className='floating-text '+colorClass+' text-sm';
+ el.textContent=text;
+ el.style.left=(window.innerWidth/2+(Math.random()*120-60))+'px';
+ el.style.top=(window.innerHeight/2+(Math.random()*60-30))+'px';
+ document.body.appendChild(el);
+ setTimeout(()=>el.remove(),1250);
+}
+function initAudio(){
+ if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+ if(audioCtx.state==='suspended')audioCtx.resume();
+}
+function playSound(type){
+ if(!state.soundEnabled)return;
+ try{
+  initAudio();
+  const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();
+  osc.connect(gain);gain.connect(audioCtx.destination);
+  const now=audioCtx.currentTime;
+  const tones={coin:[800,1200,.15],harvest:[300,600,.12],craft:[400,650,.2],buy:[500,350,.1]};
+  const t=tones[type]||tones.harvest;
+  if(type==='craft')osc.type='triangle';
+  osc.frequency.setValueAtTime(t[0],now);
+  osc.frequency.exponentialRampToValueAtTime(t[1],now+t[2]*.7);
+  gain.gain.setValueAtTime(.14,now);
+  gain.gain.exponentialRampToValueAtTime(.001,now+t[2]);
+  osc.start(now);osc.stop(now+t[2]);
+ }catch(e){}
+}
+function toggleSound(){
+ state.soundEnabled=!state.soundEnabled;
+ document.getElementById('sound-icon').className=state.soundEnabled?'fa-solid fa-volume-high':'fa-solid fa-volume-xmark';
+ saveGame(false);
+ notify(state.soundEnabled?'Sonido activado 🔊':'Sonido desactivado 🔇');
+}
+function saveGame(manual=false){
+ try{
+  localStorage.setItem(SAVE_KEY,JSON.stringify(state));
+  if(manual)showFloatingText('¡Partida guardada!','text-blue-500');
+ }catch(e){notify('No se pudo guardar la partida.');}
+}
+function addXP(amount){
+ state.xp+=Math.max(0,Math.floor(amount));
+ while(state.xp>=state.level*100){
+  state.xp-=state.level*100;
+  state.level++;
+  state.reputation+=5;
+  state.coins+=state.level*30;
+  showFloatingText('¡NIVEL '+state.level+'!','text-amber-500');
+  playSound('craft');
+ }
+}
+function switchTab(tabId){
+ document.querySelectorAll('.tab-content').forEach(el=>el.classList.add('hidden'));
+ document.querySelectorAll('.tab-btn').forEach(el=>{
+  el.classList.remove('bg-emerald-700','text-white','shadow-sm');
+  el.classList.add('text-emerald-800','hover:bg-emerald-200/50');
+ });
+ document.getElementById('section-'+tabId).classList.remove('hidden');
+ const btn=document.getElementById('tab-'+tabId);
+ btn.classList.add('bg-emerald-700','text-white','shadow-sm');
+ btn.classList.remove('text-emerald-800','hover:bg-emerald-200/50');
+}
+function upgradeOwned(id){return !!state.upgrades[id];}
+function growthMultiplier(){return state.upgrades.fastGrowth?1.3:1;}
+function animalMultiplier(){return state.upgrades.fastGrowth?1.3:1;}
+function inventoryCount(id){return Math.max(0,Number(state.inventory[id])||0);}
+function buyPlot(){
+ const cost=state.plotsCount*50;
+ if(state.coins<cost){notify('¡No tenés suficientes monedas!');return;}
+ state.coins-=cost;
+ state.plots.push({id:state.plots.length,crop:null,stage:0,timeRemaining:0});
+ state.plotsCount=state.plots.length;
+ playSound('buy');renderUI();saveGame();
+ notify('¡Compraste una nueva parcela! 🌱');
+}
+function buySeed(seedId,cost){
+ if(state.coins<cost){notify('¡Monedas insuficientes!');return;}
+ state.coins-=cost;
+ state.inventory[seedId]=(state.inventory[seedId]||0)+1;
+ playSound('buy');renderUI();saveGame();
+ showFloatingText('+1 semilla','text-emerald-600');
+}
+function openSeedModal(plotId){
+ selectedPlotId=plotId;
+ const list=document.getElementById('seed-modal-list');
+ list.innerHTML='';
+ let found=false;
+ Object.values(CROPS).forEach(crop=>{
+  const count=inventoryCount(crop.seedId);
+  if(count<=0)return;
+  found=true;
+  const div=document.createElement('button');
+  div.className='w-full flex justify-between items-center p-3 bg-slate-50 hover:bg-emerald-50 rounded-xl border border-slate-200';
+  div.innerHTML='<span><i class="fa-solid '+crop.icon+' '+crop.color+' mr-2"></i><b>'+crop.name+'</b></span><span class="text-xs font-bold">Semillas: '+count+' · Plantar</span>';
+  div.onclick=()=>plantCrop(crop.id);
+  list.appendChild(div);
+ });
+ if(!found)list.innerHTML='<p class="text-center text-sm text-slate-500 py-5">No tenés semillas. Compralas en el Mercado.</p>';
+ document.getElementById('seed-modal').classList.remove('hidden');
+}
+function closeSeedModal(){document.getElementById('seed-modal').classList.add('hidden');}
+function plantCrop(cropKey){
+ const crop=CROPS[cropKey];
+ const plot=state.plots.find(p=>p.id===selectedPlotId);
+ if(!plot||plot.crop){closeSeedModal();return;}
+ if(inventoryCount(crop.seedId)<1){notify('No tenés esa semilla.');return;}
+ state.inventory[crop.seedId]--;
+ plot.crop=cropKey;plot.stage=0;plot.timeRemaining=crop.growTime;
+ closeSeedModal();playSound('harvest');renderUI();saveGame();
+ showFloatingText('¡Plantado!','text-emerald-600');
+}
+function harvestCrop(plotId,automatic=false){
+ const plot=state.plots.find(p=>p.id===plotId);
+ if(!plot||!plot.crop||plot.stage!==1)return;
+ const key=plot.crop,crop=CROPS[key];
+ state.inventory[key]=(state.inventory[key]||0)+1;
+ addXP(crop.xp);state.reputation++;
+ plot.crop=null;plot.stage=0;plot.timeRemaining=0;
+ if(state.upgrades.autoCultivator&&inventoryCount(crop.seedId)>0){
+  state.inventory[crop.seedId]--;
+  plot.crop=key;plot.stage=0;plot.timeRemaining=crop.growTime;
+ }
+ if(!automatic){
+  showFloatingText('+1 '+crop.name,'text-emerald-600');
+  playSound('harvest');
+ }
+ renderUI();saveGame();
+}
+function buyAnimal(animalId,cost){
+ const def=ANIMALS_DEF[animalId],animal=state.animals[animalId];
+ if(!def||!animal)return;
+ if(state.coins<cost){notify('¡Monedas insuficientes!');return;}
+ state.coins-=cost;animal.count++;
+ playSound('buy');addXP(5);renderUI();saveGame();
+ showFloatingText('¡Nuevo '+def.name+'!','text-emerald-600');
+}
+function slaughterAnimal(animalId){
+ const animal=state.animals[animalId],def=ANIMALS_DEF[animalId];
+ if(!animal||animal.count<=0){notify('No tenés animales para faenar.');return;}
+ showConfirm('Faenar animal','¿Querés faenar un/a '+def.name.toLowerCase()+'? Conseguirás '+def.meatCount+' unidades de carne.',()=>{
+  animal.count--;
+  state.inventory[def.meat]=(state.inventory[def.meat]||0)+def.meatCount;
+  addXP(3);playSound('harvest');renderUI();saveGame();
+  showFloatingText('+'+def.meatCount+' carne','text-red-600');
+ });
+}
+function craftItem(recipeId){
+ const rec=RECIPES.find(r=>r.id===recipeId);
+ if(!rec)return;
+ for(const [key,needed] of Object.entries(rec.inputs)){
+  if(inventoryCount(key)<needed){notify('Te faltan ingredientes.');return;}
+ }
+ for(const [key,needed] of Object.entries(rec.inputs))state.inventory[key]-=needed;
+ state.inventory[rec.output]=(state.inventory[rec.output]||0)+rec.outCount;
+ addXP(rec.xp);state.reputation++;
+ playSound('craft');renderUI();saveGame();
+ showFloatingText('+ '+ITEMS_DEF[rec.output].name,'text-amber-600');
+}
+function buyUpgrade(upgradeId,cost){
+ if(upgradeOwned(upgradeId)){notify('Ya tenés esta mejora.');return;}
+ if(state.coins<cost){notify('¡Monedas insuficientes!');return;}
+ state.coins-=cost;state.upgrades[upgradeId]=true;
+ playSound('buy');renderUI();saveGame();
+ notify('¡Mejora comprada! 🚀');
+}
+function sellItem(itemKey,count=1){
+ const def=ITEMS_DEF[itemKey];
+ if(!def||inventoryCount(itemKey)<count){notify('No hay suficiente stock.');return;}
+ state.inventory[itemKey]-=count;
+ let price=def.price;
+ if(state.upgrades.masterCraft&&isCrafted(itemKey))price=Math.floor(price*1.2);
+ const total=price*count;
+ state.coins+=total;state.reputation+=Math.max(0,Math.floor(total/100));
+ addXP(Math.max(1,Math.floor(total/30)));
+ playSound('coin');renderUI();saveGame();
+ showFloatingText('+'+money(total),'text-emerald-600');
+}
+function isCrafted(id){return RECIPES.some(r=>r.output===id);}
+function sellAllRaw(){
+ const keys=[...Object.keys(CROPS),...Object.values(ANIMALS_DEF).map(a=>a.product),...Object.values(ANIMALS_DEF).map(a=>a.meat)];
+ sellMany(keys,'materia prima');
+}
+function sellAllCrafted(){sellMany(RECIPES.map(r=>r.output),'productos elaborados');}
+function sellMany(keys,label){
+ let total=0,qty=0;
+ [...new Set(keys)].forEach(id=>{
+  const count=inventoryCount(id),def=ITEMS_DEF[id];
+  if(count>0&&def){
+   let price=def.price;
+   if(state.upgrades.masterCraft&&isCrafted(id))price=Math.floor(price*1.2);
+   total+=price*count;qty+=count;state.inventory[id]=0;
+  }
+ });
+ if(!qty){notify('No tenés '+label+' para vender.');return;}
+ state.coins+=total;state.reputation+=Math.floor(total/100);addXP(Math.max(1,Math.floor(total/30)));
+ playSound('coin');renderUI();saveGame();
+ showFloatingText('+'+money(total),'text-emerald-600');
+}
+function showConfirm(title,message,action){
+ document.getElementById('confirm-title').textContent=title;
+ document.getElementById('confirm-message').textContent=message;
+ const yes=document.getElementById('confirm-yes');
+ yes.onclick=()=>{closeConfirm();action();};
+ const modal=document.getElementById('confirm-modal');
+ modal.classList.remove('hidden');modal.classList.add('flex');
+}
+function closeConfirm(){
+ const modal=document.getElementById('confirm-modal');
+ modal.classList.add('hidden');modal.classList.remove('flex');
+}
+function confirmReset(){
+ showConfirm('Reiniciar granja','¿Estás seguro? Se borrará la partida guardada y no se puede deshacer.',()=>{
+  localStorage.removeItem(SAVE_KEY);
+  state=defaultState();renderUI();saveGame();
+  notify('¡Nueva granja lista!');
+ });
+}
+
+function renderHeader(){
+ document.getElementById('stat-coins').textContent=money(state.coins);
+ document.getElementById('stat-rep').textContent=state.reputation;
+ document.getElementById('farm-level-badge').textContent='Nivel '+state.level;
+ const req=state.level*100;
+ document.getElementById('xp-text').textContent='XP: '+state.xp+' / '+req;
+ document.getElementById('xp-bar').style.width=Math.min(100,state.xp/req*100)+'%';
+ document.getElementById('plot-cost').textContent=money(state.plotsCount*50);
+ document.getElementById('sound-icon').className=state.soundEnabled?'fa-solid fa-volume-high':'fa-solid fa-volume-xmark';
+}
+function renderPlots(){
+ const root=document.getElementById('plots-container');root.innerHTML='';
+ state.plots.forEach(plot=>{
+  const div=document.createElement('div');
+  div.className='border-2 border-dashed border-amber-800/20 bg-amber-900/5 rounded-2xl p-3 flex flex-col items-center justify-between min-h-[135px] relative';
+  if(!plot.crop){
+   div.innerHTML='<div class="text-amber-800/40 text-3xl mt-2"><i class="fa-solid fa-mound"></i></div><span class="text-[11px] font-bold text-amber-800/60 uppercase">Parcela '+(plot.id+1)+'</span><button class="w-full bg-emerald-600 text-white font-bold text-xs py-2 rounded-xl">🌱 Plantar</button>';
+   div.querySelector('button').onclick=()=>openSeedModal(plot.id);
+  }else{
+   const crop=CROPS[plot.crop];
+   const pct=plot.stage===1?100:Math.max(0,Math.min(100,((crop.growTime-plot.timeRemaining)/crop.growTime)*100));
+   if(plot.stage===1)div.className+=' ready-harvest bg-emerald-100/70 border-emerald-400';
+   div.innerHTML='<div class="text-emerald-600 text-3xl mt-1"><i class="fa-solid '+crop.icon+'"></i></div><div class="text-center w-full"><span class="text-xs font-bold block">'+crop.name+'</span><div class="w-full bg-slate-200 rounded-full h-1.5 mt-2 overflow-hidden"><div class="bg-emerald-500 h-1.5" style="width:'+pct+'%"></div></div></div><span class="text-[10px] font-semibold '+(plot.stage===1?'text-emerald-700':'text-slate-500')+'">'+(plot.stage===1?'¡Lista para cosechar!':Math.ceil(plot.timeRemaining)+' s')+'</span><button class="w-full '+(plot.stage===1?'bg-amber-500':'bg-slate-300')+' text-white font-bold text-xs py-2 rounded-xl" '+(plot.stage!==1?'disabled':'')+'>'+(plot.stage===1?'🌾 Cosechar':'Creciendo...')+'</button>';
+   div.querySelector('button').onclick=()=>harvestCrop(plot.id);
+  }
+  root.appendChild(div);
+ });
+}
+function renderAnimals(){
+ const root=document.getElementById('animals-container');root.innerHTML='';
+ Object.entries(ANIMALS_DEF).forEach(([key,def])=>{
+  const animal=state.animals[key];
+  const card=document.createElement('div');
+  card.className='bg-emerald-50/50 border border-emerald-200 rounded-2xl p-4 flex flex-col justify-between gap-3';
+  const pct=Math.min(100,animal.progress);
+  card.innerHTML='<div class="flex justify-between items-center gap-2"><div class="flex items-center gap-3"><div class="text-3xl">'+def.emoji+'</div><div><h3 class="font-bold text-sm">'+def.name+'</h3><p class="text-xs text-slate-500">Cantidad: <b class="text-emerald-700">'+animal.count+'</b></p></div></div><button class="slaughter bg-red-100 hover:bg-red-200 text-red-700 text-xs px-2 py-2 rounded-xl font-bold">🥩 Faenar</button></div><div><div class="flex justify-between text-[11px] text-slate-500 mb-1"><span>Produce '+def.prodName+'</span><span>'+Math.floor(pct)+'%</span></div><div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden"><div class="bg-amber-500 h-2" style="width:'+pct+'%"></div></div></div><p class="text-xs text-slate-500">'+(animal.count>0?'Producción cada '+def.cycleTime+' segundos.':'Comprá este animal en el Mercado.')+'</p>';
+  card.querySelector('button').onclick=()=>slaughterAnimal(key);
+  root.appendChild(card);
+ });
+}
+function renderShops(){
+ const seeds=document.getElementById('seeds-shop');seeds.innerHTML='';
+ Object.values(CROPS).forEach(crop=>{
+  const div=document.createElement('div');
+  div.className='flex justify-between items-center gap-2 p-2.5 bg-slate-50 rounded-xl border border-slate-200/60';
+  div.innerHTML='<div class="flex items-center gap-2"><i class="fa-solid '+crop.icon+' '+crop.color+' text-lg"></i><div><div class="text-xs font-bold">Semilla de '+crop.name+'</div><div class="text-[10px] text-slate-400">Crece en '+crop.growTime+' s · Stock: '+inventoryCount(crop.seedId)+'</div></div></div><button class="bg-emerald-600 text-white font-bold text-xs px-3 py-2 rounded-xl">'+money(crop.seedCost)+'</button>';
+  div.querySelector('button').onclick=()=>buySeed(crop.seedId,crop.seedCost);
+  seeds.appendChild(div);
+ });
+ const shop=document.getElementById('animals-shop');shop.innerHTML='';
+ Object.entries(ANIMALS_DEF).forEach(([key,a])=>{
+  const div=document.createElement('div');
+  div.className='flex justify-between items-center gap-2 p-2.5 bg-slate-50 rounded-xl border border-slate-200/60';
+  div.innerHTML='<div class="flex items-center gap-2"><span class="text-xl">'+a.emoji+'</span><div><div class="text-xs font-bold">'+a.name+'</div><div class="text-[10px] text-slate-400">Tenés: '+state.animals[key].count+' · Produce '+a.prodName+'</div></div></div><button class="bg-amber-500 text-white font-bold text-xs px-3 py-2 rounded-xl">'+money(a.cost)+'</button>';
+  div.querySelector('button').onclick=()=>buyAnimal(key,a.cost);
+  shop.appendChild(div);
+ });
+}
+function renderQuickSell(){
+ const root=document.getElementById('quick-sell-container');root.innerHTML='';
+ Object.entries(ITEMS_DEF).filter(([id,d])=>d.type!=='seed').forEach(([id,item])=>{
+  const count=inventoryCount(id);
+  const div=document.createElement('div');
+  div.className='flex justify-between items-center gap-2 p-2.5 bg-slate-50 rounded-xl border border-slate-200/60';
+  div.innerHTML='<div class="flex items-center gap-2 min-w-0"><i class="fa-solid '+item.icon+' '+item.color+' text-lg"></i><div><div class="text-xs font-bold">'+item.name+'</div><div class="text-[10px] text-slate-500">Precio: '+money(item.price)+' · Stock: '+count+'</div></div></div><button class="bg-emerald-600 text-white font-bold text-xs px-3 py-2 rounded-xl shrink-0" '+(count<1?'disabled':'')+'>Vender 1</button>';
+  div.querySelector('button').onclick=()=>sellItem(id,1);
+  root.appendChild(div);
+ });
+}
+function renderRecipes(){
+ const root=document.getElementById('recipes-container');root.innerHTML='';
+ RECIPES.forEach(rec=>{
+  const out=ITEMS_DEF[rec.output];
+  const can=Object.entries(rec.inputs).every(([id,n])=>inventoryCount(id)>=n);
+  const requirements=Object.entries(rec.inputs).map(([id,n])=>ITEMS_DEF[id].name+': '+inventoryCount(id)+'/'+n).join(' · ');
+  const card=document.createElement('div');
+  card.className='bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col justify-between gap-3';
+  card.innerHTML='<div><div class="flex items-center gap-3 mb-2"><i class="fa-solid '+rec.icon+' '+out.color+' text-2xl"></i><div><h3 class="font-bold text-sm">'+rec.name+'</h3><p class="text-xs text-emerald-600 font-bold">Venta: '+money(out.price)+'</p></div></div><p class="text-[11px] text-slate-500">Necesitás: '+requirements+'</p><p class="text-[11px] text-slate-500 mt-2">Experiencia: '+rec.xp+' XP</p></div><button class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs py-2.5 rounded-xl" '+(!can?'disabled':'')+'>⚙️ Elaborar</button>';
+  card.querySelector('button').onclick=()=>craftItem(rec.id);
+  root.appendChild(card);
+ });
+}
+function renderUpgrades(){
+ const root=document.getElementById('upgrades-container');root.innerHTML='';
+ UPGRADES_DEF.forEach(upg=>{
+  const bought=upgradeOwned(upg.id);
+  const div=document.createElement('div');
+  div.className='bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-between gap-3';
+  div.innerHTML='<div class="flex items-center gap-3"><div class="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-xl text-blue-600"><i class="fa-solid '+upg.icon+'"></i></div><div><h3 class="font-bold text-sm">'+upg.name+'</h3><p class="text-xs text-slate-500">'+upg.desc+'</p><p class="text-[10px] text-slate-400 mt-1">'+(bought?'Mejora activa':'Inversión única')+'</p></div></div><button class="'+(bought?'bg-emerald-100 text-emerald-700':'bg-blue-600 text-white')+' font-bold text-xs px-3 py-2 rounded-xl shrink-0" '+(bought?'disabled':'')+'>'+(bought?'Comprado':money(upg.cost))+'</button>';
+  div.querySelector('button').onclick=()=>buyUpgrade(upg.id,upg.cost);
+  root.appendChild(div);
+ });
+}
+function renderInventory(){
+ const root=document.getElementById('inventory-grid');root.innerHTML='';
+ let found=0;
+ Object.entries(ITEMS_DEF).forEach(([id,item])=>{
+  const count=inventoryCount(id);
+  if(count<=0)return;
+  found++;
+  const card=document.createElement('div');
+  card.className='bg-slate-50 border border-slate-200 rounded-2xl p-3 flex flex-col items-center justify-between text-center min-h-[125px]';
+  card.innerHTML='<div class="text-2xl '+item.color+' mt-1"><i class="fa-solid '+item.icon+'"></i></div><div><div class="text-xs font-bold">'+item.name+'</div><div class="text-xs font-black text-emerald-600">x'+count+'</div></div><button class="w-full bg-slate-200 hover:bg-emerald-600 hover:text-white text-slate-700 font-bold text-[11px] py-2 rounded-lg mt-2">Vender ('+money(item.price)+')</button>';
+  card.querySelector('button').onclick=()=>sellItem(id,1);
+  root.appendChild(card);
+ });
+ if(!found)root.innerHTML='<div class="col-span-full text-center text-slate-400 py-10">El almacén está vacío.</div>';
+}
+function renderUI(){
+ renderHeader();renderPlots();renderAnimals();renderShops();
+ renderQuickSell();renderRecipes();renderUpgrades();renderInventory();
+}
+function gameLoop(){
+ const now=Date.now();
+ let changed=false;
+ const dt=Math.min(2,(now-lastTick)/1000);
+ lastTick=now;
+ if(tickBusy)return;
+ tickBusy=true;
+ try{
+  const multiplier=growthMultiplier();
+  state.plots.forEach(plot=>{
+   if(!plot.crop||plot.stage===1)return;
+   plot.timeRemaining-=dt*multiplier;
+   if(plot.timeRemaining<=0){
+    plot.timeRemaining=0;plot.stage=1;changed=true;
+    if(state.upgrades.autoHarvester||state.upgrades.autoCultivator)harvestCrop(plot.id,true);
+   }
+  });
+  Object.entries(ANIMALS_DEF).forEach(([key,def])=>{
+   const animal=state.animals[key];
+   if(!animal||animal.count<=0)return;
+   const speed=state.upgrades.autoFeedAnimals?1.25:1;
+   animal.progress+=dt*100/def.cycleTime*speed*animalMultiplier();
+   while(animal.progress>=100){
+    animal.progress-=100;
+    state.inventory[def.product]=(state.inventory[def.product]||0)+animal.count;
+    changed=true;
+    if(state.upgrades.autoFeedAnimals){
+     // El recolector automático junta los productos directamente en el almacén.
+    }
+   }
+  });
+  if(changed){renderUI();saveGame(false);}
+  else{
+   renderHeader();
+   // Actualiza las barras sin reconstruir todas las tarjetas cada segundo.
+   renderPlots();renderAnimals();
+  }
+ }finally{tickBusy=false;}
+}
+function autoSave(){saveGame(false);}
+
+window.addEventListener('beforeunload',autoSave);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)autoSave();});
+document.getElementById('seed-modal').addEventListener('click',e=>{if(e.target.id==='seed-modal')closeSeedModal();});
+document.getElementById('confirm-modal').addEventListener('click',e=>{if(e.target.id==='confirm-modal')closeConfirm();});
+
+renderUI();
+saveGame(false);
+setInterval(gameLoop,1000);
+setInterval(autoSave,15000);
+</script>
+</body>
+</html>
